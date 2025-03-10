@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Main</title>
+</head>
+
+<body>
+  <img src="./static/logo/amazing_logo.png" alt="SuperLogo"></img>
+  <ul>
+    {{ range .articles }}
+    <li>
+      <a href="/article/{{ .ID }}">{{ .Title }}</a>
+    </li>
+    {{ end }}
+  </ul>
+
+  {{if gt .page 1}}
+  <a href="/?page={{sub .page 1}}">Previous</a>
+  {{end}}
+
+  {{if lt .page .total_pages}}
+  <a href="/?page={{add .page 1}}">Next</a>
+  {{end}}
+
+  <a href="/?page={{.total_pages}}">Last</a><br><br>
+
+
+  <a href="/admin">Post new article</a><br>
+  <a href="/admin/login">Login admin</a>
+</body>
+
+</html>
