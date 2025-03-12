@@ -1,0 +1,19 @@
+Стек:
+1. Golang
+2. REST API
+  2.1. HTTPS (multipart/formdata)
+3. Chi
+4. Mkcert
+5. ORM (GORM)
+6. Logger
+7. Golangcli-lint
+8. Testify
+
+TODO:
+1. Config server
+2. Logger
+3. Storage
+4. Router
+5. HTTPS
+5. Test server
+6. Client
