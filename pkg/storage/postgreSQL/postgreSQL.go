@@ -1,3 +1,5 @@
+// Пакет postgreSQL нужен для работы сервера с базой данных.
+// Используется PGX/V5.
 package postgresql
 
 import (
@@ -8,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// Скрипт инициализации таблиц.
 const initSchema = `
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -25,11 +28,15 @@ CREATE TABLE IF NOT EXISTS files (
 );
 `
 
+// Storage структура для работы с PostgreSQL базой данных.
 type Storage struct {
 	db *pgx.Conn
 }
 
-func New(log *slog.Logger, storagePath string) (Storage, error) {
+// New инициализирует структуру Storage.
+// Если в БД нет нужных таблиц, создает их.
+// В случае ошибки возвращает пустую структуру и ошибку.
+func New(ctx context.Context, log *slog.Logger, storagePath string) (Storage, error) {
 	const fn = "storage.PSQL.New"
 	l := log.With(slog.String("fn", fn))
 
@@ -40,14 +47,14 @@ func New(log *slog.Logger, storagePath string) (Storage, error) {
 		return Storage{}, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	conn, err := pgx.ConnectConfig(context.Background(), dns)
+	conn, err := pgx.ConnectConfig(ctx, dns)
 	if err != nil {
 		l.Error("error to connect to DB", "ConnectConfig", err)
 
 		return Storage{}, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	if _, err := conn.Exec(context.Background(), initSchema); err != nil {
+	if _, err := conn.Exec(ctx, initSchema); err != nil {
 		l.Error("error to create new tables", "Exex", err)
 
 		return Storage{}, fmt.Errorf("%s: %w", fn, err)
@@ -56,6 +63,7 @@ func New(log *slog.Logger, storagePath string) (Storage, error) {
 	return Storage{db: conn}, nil
 }
 
-func (s *Storage) Close() {
-	s.db.Close(context.Background())
+// Close метод закрывает подкючение к базе данных.
+func (s *Storage) Close(ctx context.Context) {
+	s.db.Close(ctx)
 }

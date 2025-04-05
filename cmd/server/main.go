@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
@@ -11,6 +12,7 @@ import (
 func main() {
 	cfg := config.MustLoad()
 	log := logger.SetupLogger(cfg.Env)
+	ctx := context.Background()
 
 	log.Info("Config data",
 		slog.String("env", cfg.Env),
@@ -20,11 +22,11 @@ func main() {
 
 	log.Info("Start DB")
 
-	db, err := postgresql.New(log, cfg.StorageDNS)
+	db, err := postgresql.New(ctx, log, cfg.StorageDNS)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	defer db.Close(ctx)
 
 	log.Info("Start DB is success")
 }
