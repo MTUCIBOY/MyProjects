@@ -1,3 +1,5 @@
+// TODO: When project will be done, change MustLoad func
+
 // Пакет config нужен для работы с конфигурацией облачного сервера.
 // Пакет использует конфиги в формате YAML.
 // Зависит от стороннего пакета cleanenv для более удобной работы с тегами структуры и парсинга конфиг-файла.
@@ -19,7 +21,7 @@ type Config struct {
 	Env string `env-default:"local" yaml:"env"`
 
 	// Переменная для подключения к базе данных.
-	// Используется в GORM PostgresSQL.
+	// Используется в PGX PostgresSQL.
 	// Если строка пустая, но приложение не запустится.
 	StorageDNS string `env-required:"true" yaml:"storage_dns"`
 
@@ -46,7 +48,8 @@ type HTTPServer struct {
 func MustLoad() *Config {
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
-		log.Fatal("CONFIG_PATH is not set")
+		// log.Fatal("CONFIG_PATH is not set")
+		configPath = "/home/pain/MyProjects/config/local.yml"
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
