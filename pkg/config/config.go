@@ -23,7 +23,10 @@ type Config struct {
 	// Переменная для подключения к базе данных.
 	// Используется в PGX PostgresSQL.
 	// Если строка пустая, но приложение не запустится.
-	StorageDNS string `env-required:"true" yaml:"storage_dns"`
+	StorageDSN string `env-required:"true" yaml:"storage_dsn"`
+
+	// Переменная, задающая время жизни JWT.
+	TokenTTL time.Duration `env-required:"true" yaml:"token_ttl"`
 
 	// Настройки HTTP-сервера.
 	HTTPServer `yaml:"http_server"`

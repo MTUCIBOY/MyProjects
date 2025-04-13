@@ -14,19 +14,14 @@ func main() {
 	log := logger.SetupLogger(cfg.Env)
 	ctx := context.Background()
 
-	log.Info("Config data",
-		slog.String("env", cfg.Env),
-		slog.String("address", cfg.Address),
-		slog.String("StorageDNS", cfg.StorageDNS),
-	)
+	log.Info("Start server", slog.Any("config", cfg))
 
 	log.Info("Start DB")
-
-	db, err := postgresql.New(ctx, log, cfg.StorageDNS)
+	db, err := postgresql.New(ctx, log, cfg.StorageDSN)
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close(ctx)
-
 	log.Info("Start DB is success")
+
 }
