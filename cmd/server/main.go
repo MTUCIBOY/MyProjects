@@ -7,6 +7,8 @@ import (
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
 	postgresql "github.com/MTUCIBOY/MyProject/VKR/pkg/storage/postgreSQL"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
@@ -17,11 +19,20 @@ func main() {
 	log.Info("Start server", slog.Any("config", cfg))
 
 	log.Info("Start DB")
+
 	db, err := postgresql.New(ctx, log, cfg.StorageDSN)
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close(ctx)
+
 	log.Info("Start DB is success")
 
+	router := chi.NewRouter()
+	router.Use(
+		middleware.RequestID,
+		middleware.Logger,
+		middleware.Recoverer,
+		middleware.URLFormat,
+	)
 }

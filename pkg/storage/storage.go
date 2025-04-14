@@ -1,5 +1,17 @@
 package storage
 
+import (
+	"errors"
+	"regexp"
+)
+
+var (
+	ErrFileNotFound   = errors.New("file not found")
+	ErrUserNotFound   = errors.New("user not found")
+	ErrNotUniqueEmail = errors.New("this email already exists")
+	ErrInvalidParams  = errors.New("Invalid params")
+)
+
 // Скрипты для работы с таблицами.
 const (
 	InitSchema = `
@@ -45,3 +57,10 @@ const (
 		WHERE email = $1
 	`
 )
+
+func ValidateEmail(email string) bool {
+	const emailRegex = `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
+
+	re := regexp.MustCompile(emailRegex)
+	return re.MatchString(email)
+}

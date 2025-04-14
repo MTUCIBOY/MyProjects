@@ -4,13 +4,17 @@ package postgresql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const NotUniqueEmail = "23505"
 
 // Storage структура для работы с PostgreSQL базой данных.
 type Storage struct {
@@ -67,6 +71,16 @@ func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvai
 	const fn = "postgresql.storage.NewUser"
 	log := s.log.With("fn", fn, "email", email)
 
+	if spaceAvaible < 1 || !storage.ValidateEmail(email) {
+		log.Error(
+			"Invalid params",
+			slog.Int64("spaceAvaible", spaceAvaible),
+			slog.Bool("email validator", storage.ValidateEmail(email)),
+		)
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrInvalidParams)
+	}
+
 	passHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error("fail to generate hash from password", slog.String("err", err.Error()))
@@ -76,6 +90,13 @@ func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvai
 
 	_, err = s.db.Exec(ctx, storage.NewUserSchema, email, passHash, spaceAvaible)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == NotUniqueEmail {
+			log.Error("User already exist", slog.String("err", err.Error()))
+
+			return fmt.Errorf("%s: %w", fn, storage.ErrNotUniqueEmail)
+		}
+
 		log.Error("fail to insert new user to table", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
@@ -108,11 +129,17 @@ func (s *Storage) DeleteFile(ctx context.Context, userID, filename string) error
 	const fn = "postgresql.storage.DeleteFile"
 	log := s.log.With("fn", fn, "id", userID)
 
-	_, err := s.db.Exec(ctx, storage.DeleteFileSchema, userID, filename)
+	commandTag, err := s.db.Exec(ctx, storage.DeleteFileSchema, userID, filename)
 	if err != nil {
 		log.Error("fail to delete file to table", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		log.Error(storage.ErrFileNotFound.Error())
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrFileNotFound)
 	}
 
 	log.Info("File is deleted from DB")
@@ -125,11 +152,17 @@ func (s *Storage) DeleteUser(ctx context.Context, userID string) error {
 	const fn = "postgresql.storage.DeleteUser"
 	log := s.log.With("fn", fn, "id", userID)
 
-	_, err := s.db.Exec(ctx, storage.DeleteUserSchema, userID)
+	commandTag, err := s.db.Exec(ctx, storage.DeleteUserSchema, userID)
 	if err != nil {
 		log.Error("fail to delete user to table", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		log.Error(storage.ErrUserNotFound.Error())
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
 	}
 
 	log.Info("User is deleted from DB")
