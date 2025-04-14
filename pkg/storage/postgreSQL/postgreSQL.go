@@ -66,7 +66,7 @@ func (s *Storage) Close(ctx context.Context) {
 }
 
 // NewUser метод для сохранения нового пользователя в БД.
-// spaceAvaible пишется в мегабайтах.
+// spaceAvaible пишется в байтах.
 func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvaible int64) error {
 	const fn = "postgresql.storage.NewUser"
 	log := s.log.With("fn", fn, "email", email)
@@ -108,11 +108,11 @@ func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvai
 }
 
 // NewFile метод сохранения информации о файле в БД.
-func (s *Storage) NewFile(ctx context.Context, userID, filename string) error {
+func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize int64) error {
 	const fn = "postgresql.storage.NewFile"
 	log := s.log.With("fn", fn, "id", userID)
 
-	_, err := s.db.Exec(ctx, storage.NewFileSchema, userID, filename)
+	_, err := s.db.Exec(ctx, storage.NewFileSchema, userID, filename, fileSize)
 	if err != nil {
 		log.Error("fail to insert new file to table", slog.String("err", err.Error()))
 

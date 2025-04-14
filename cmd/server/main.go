@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/saver"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
 	postgresql "github.com/MTUCIBOY/MyProject/VKR/pkg/storage/postgreSQL"
 	"github.com/go-chi/chi/v5"
@@ -16,7 +18,7 @@ func main() {
 	log := logger.SetupLogger(cfg.Env)
 	ctx := context.Background()
 
-	log.Info("Start server", slog.Any("config", cfg))
+	log.Info("Start app", slog.Any("config", cfg))
 
 	log.Info("Start DB")
 
@@ -28,6 +30,8 @@ func main() {
 
 	log.Info("Start DB is success")
 
+	log.Info("Start router")
+
 	router := chi.NewRouter()
 	router.Use(
 		middleware.RequestID,
@@ -35,4 +39,21 @@ func main() {
 		middleware.Recoverer,
 		middleware.URLFormat,
 	)
+
+	router.Post("/{userID}", saver.New(log, &db))
+
+	log.Info("start server", slog.Any("cfg", cfg))
+	srv := &http.Server{
+		Addr:         cfg.Address,
+		Handler:      router,
+		ReadTimeout:  cfg.Timeout,
+		WriteTimeout: cfg.Timeout,
+		IdleTimeout:  cfg.IdleTimeout,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Error("failed to start server", slog.String("err", err.Error()))
+	}
+
+	log.Error("server stopped")
 }
