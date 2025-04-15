@@ -1,11 +1,10 @@
 // TODO: поменять baseDir
-// Если файл существует, то ничего не делать
-// Добавить логи
 
 package saver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -14,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -31,22 +31,23 @@ type FileSaver interface {
 func New(log *slog.Logger, fileSaver FileSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.saver.New"
-		log = log.With(
+		l := log.With(
 			slog.String("fn", fn),
 			slog.String("requestID", middleware.GetReqID(r.Context())),
 		)
 
 		err := r.ParseMultipartForm(mB10)
 		if err != nil {
-			log.Error("failed to parse multipart form", slog.String("err", err.Error()))
+			l.Error("failed to parse multipart form", slog.String("err", err.Error()))
 			http.Error(w, "Unable to parse form", http.StatusBadRequest)
 
 			return
 		}
+		defer r.MultipartForm.RemoveAll()
 
 		file, handler, err := r.FormFile("file")
 		if err != nil {
-			log.Error("failed to retrieve file from form", slog.String("err", err.Error()))
+			l.Error("failed to retrieve file from form", slog.String("err", err.Error()))
 			http.Error(w, "Unable to retrieve file", http.StatusBadRequest)
 
 			return
@@ -55,27 +56,42 @@ func New(log *slog.Logger, fileSaver FileSaver) http.HandlerFunc {
 
 		userID := chi.URLParam(r, "userID")
 		if userID == "" {
-			log.Error("missing user ID")
+			l.Error("missing user ID")
 			http.Error(w, "User ID is required", http.StatusBadRequest)
-
-			return
-		}
-
-		err = saveFileToDisk(userID, handler.Filename, file)
-		if err != nil {
-			log.Error("failed to save file", slog.String("err", err.Error()))
-			http.Error(w, "Failed to save file", http.StatusInternalServerError)
 
 			return
 		}
 
 		err = fileSaver.NewFile(r.Context(), userID, handler.Filename, handler.Size)
 		if err != nil {
-			log.Error("failed to save file info to DB", slog.String("err", err.Error()))
+			l.Error("failed to save file info to DB", slog.String("err", err.Error()))
+
+			if errors.Is(err, storage.ErrFileExists) {
+				http.Error(w, "Failed to save file, file exists", http.StatusBadRequest)
+
+				return
+			}
+
+			if errors.Is(err, storage.ErrNotEnoughSpace) {
+				http.Error(w, "Failed to save file, not enough space", http.StatusBadRequest)
+
+				return
+			}
+
 			http.Error(w, "Failed to save file metadata", http.StatusInternalServerError)
 
 			return
 		}
+
+		err = saveFileToDisk(userID, handler.Filename, file)
+		if err != nil {
+			l.Error("failed to save file", slog.String("err", err.Error()))
+			http.Error(w, "Failed to save file", http.StatusInternalServerError)
+
+			return
+		}
+
+		l.Info("File is saved")
 
 		w.WriteHeader(http.StatusCreated)
 	}

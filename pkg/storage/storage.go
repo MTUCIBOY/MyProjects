@@ -9,7 +9,9 @@ var (
 	ErrFileNotFound   = errors.New("file not found")
 	ErrUserNotFound   = errors.New("user not found")
 	ErrNotUniqueEmail = errors.New("this email already exists")
-	ErrInvalidParams  = errors.New("Invalid params")
+	ErrInvalidParams  = errors.New("invalid params")
+	ErrNotEnoughSpace = errors.New("not enough space")
+	ErrFileExists     = errors.New("file exists")
 )
 
 // Скрипты для работы с таблицами.
@@ -56,11 +58,24 @@ const (
 		SELECT id FROM users
 		WHERE email = $1
 	`
+
+	CheckSpaceSchema = `
+		SELECT (space_available >= space_taken + $1) FROM users
+		WHERE id = $2
+	`
+
+	CheckFileSchema = `
+		SELECT EXISTS (
+			SELECT 1
+			FROM files
+			WHERE user_id = $1 and filename = $2
+		)
+	`
 )
 
 func ValidateEmail(email string) bool {
 	const emailRegex = `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
-
 	re := regexp.MustCompile(emailRegex)
+
 	return re.MatchString(email)
 }

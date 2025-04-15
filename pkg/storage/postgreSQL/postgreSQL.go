@@ -112,6 +112,37 @@ func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize
 	const fn = "postgresql.storage.NewFile"
 	log := s.log.With("fn", fn, "id", userID)
 
+	var (
+		IsHasSpace  bool
+		IsFileExist bool
+	)
+
+	row := s.db.QueryRow(ctx, storage.CheckSpaceSchema, fileSize, userID)
+	if err := row.Scan(&IsHasSpace); err != nil {
+		log.Error("fail to check space", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if !IsHasSpace {
+		log.Error("fail to save file, not enough space")
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrNotEnoughSpace)
+	}
+
+	row = s.db.QueryRow(ctx, storage.CheckFileSchema, userID, filename)
+	if err := row.Scan(&IsFileExist); err != nil {
+		log.Error("fail to check space", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if IsFileExist {
+		log.Error("fail to save file, file exists")
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrFileExists)
+	}
+
 	_, err := s.db.Exec(ctx, storage.NewFileSchema, userID, filename, fileSize)
 	if err != nil {
 		log.Error("fail to insert new file to table", slog.String("err", err.Error()))

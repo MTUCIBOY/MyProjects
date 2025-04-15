@@ -42,7 +42,7 @@ func main() {
 
 	router.Post("/{userID}", saver.New(log, &db))
 
-	log.Info("start server", slog.Any("cfg", cfg))
+	log.Info("Start server", slog.Any("cfg", cfg))
 	srv := &http.Server{
 		Addr:         cfg.Address,
 		Handler:      router,
