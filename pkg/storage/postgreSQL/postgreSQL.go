@@ -112,18 +112,37 @@ func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize
 	const fn = "postgresql.storage.NewFile"
 	log := s.log.With("fn", fn, "userID", userID)
 
-	err := s.isHasSpace(ctx, userID, fileSize)
+	isUserExist, err := s.isUserExist(ctx, userID)
+	if err != nil {
+		log.Error("err in func isUserExist", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if !isUserExist {
+		log.Error("fail save file, user not found")
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
+	}
+
+	err = s.isHasSpace(ctx, userID, fileSize)
 	if err != nil {
 		log.Error("err in func isHasSpace", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	err = s.isFileExist(ctx, userID, filename)
+	isFileExist, err := s.IsFileExist(ctx, userID, filename)
 	if err != nil {
 		log.Error("err in func isFileExist", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if isFileExist {
+		log.Error("fail save file, file exists")
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrFileExists)
 	}
 
 	_, err = s.db.Exec(ctx, storage.ChangeSpaceTakenSchema, userID, fileSize)
@@ -145,6 +164,7 @@ func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize
 	return nil
 }
 
+// TODO: refactor
 // DeleteFile метод для удаления информации о файле из БД.
 func (s *Storage) DeleteFile(ctx context.Context, userID, filename string) error {
 	const fn = "postgresql.storage.DeleteFile"
@@ -206,6 +226,24 @@ func (s *Storage) UserID(ctx context.Context, email string) (string, error) {
 	return userID, nil
 }
 
+// IsFileExist метод для проверки существования файла.
+func (s *Storage) IsFileExist(ctx context.Context, userID, filename string) (bool, error) {
+	const fn = "postgresql.storage.isFileExist"
+	log := s.log.With("fn", fn, "userID", userID)
+
+	var IsFileExist bool
+
+	row := s.db.QueryRow(ctx, storage.CheckFileSchema, userID, filename)
+	if err := row.Scan(&IsFileExist); err != nil {
+		log.Error("fail to check space", slog.String("err", err.Error()))
+
+		return IsFileExist, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return IsFileExist, nil
+}
+
+// isHasSpace метод для проверки есть ли свободное место.
 func (s *Storage) isHasSpace(ctx context.Context, userID string, fileSize int64) error {
 	const fn = "postgresql.storage.isHasSpace"
 	log := s.log.With("fn", fn, "userID", userID)
@@ -220,7 +258,7 @@ func (s *Storage) isHasSpace(ctx context.Context, userID string, fileSize int64)
 	}
 
 	if !IsHasSpace {
-		log.Error("fail to save file, not enough space")
+		log.Error("not enough space")
 
 		return fmt.Errorf("%s: %w", fn, storage.ErrNotEnoughSpace)
 	}
@@ -228,24 +266,19 @@ func (s *Storage) isHasSpace(ctx context.Context, userID string, fileSize int64)
 	return nil
 }
 
-func (s *Storage) isFileExist(ctx context.Context, userID, filename string) error {
-	const fn = "postgresql.storage.isFileExist"
+// isUserExist метод для проверки существует ли пльзователь.
+func (s *Storage) isUserExist(ctx context.Context, userID string) (bool, error) {
+	const fn = "postgresql.storage.isUserExist"
 	log := s.log.With("fn", fn, "userID", userID)
 
-	var IsFileExist bool
+	var isUserExist bool
 
-	row := s.db.QueryRow(ctx, storage.CheckFileSchema, userID, filename)
-	if err := row.Scan(&IsFileExist); err != nil {
-		log.Error("fail to check space", slog.String("err", err.Error()))
+	row := s.db.QueryRow(ctx, storage.CheckUserSchema, userID)
+	if err := row.Scan(&isUserExist); err != nil {
+		log.Error("fail to check user", slog.String("err", err.Error()))
 
-		return fmt.Errorf("%s: %w", fn, err)
+		return isUserExist, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	if IsFileExist {
-		log.Error("fail to save file, file exists")
-
-		return fmt.Errorf("%s: %w", fn, storage.ErrFileExists)
-	}
-
-	return nil
+	return isUserExist, nil
 }

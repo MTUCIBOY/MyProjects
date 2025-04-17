@@ -1,5 +1,7 @@
 // TODO: поменять baseDir
 
+// Saver пакет для хендлера save.
+// Нужен, чтобы сохранять файлы на облаке.
 package saver
 
 import (
@@ -24,10 +26,12 @@ const (
 	fileRights = 0o750
 )
 
+// FileSaver интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
 type FileSaver interface {
 	NewFile(ctx context.Context, userID, filename string, fileSize int64) error
 }
 
+// New функция для создания хендлера save.
 func New(log *slog.Logger, fileSaver FileSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.saver.New"
@@ -97,6 +101,7 @@ func New(log *slog.Logger, fileSaver FileSaver) http.HandlerFunc {
 	}
 }
 
+// ensureUserDirectory функция для проверки и создания папки пользователя на облаке.
 func ensureUserDirectory(userID string) (string, error) {
 	userDir := filepath.Join(baseDir, userID)
 
@@ -110,6 +115,7 @@ func ensureUserDirectory(userID string) (string, error) {
 	return userDir, nil
 }
 
+// saveFileToDisk функция сохранения файла на облаке.
 func saveFileToDisk(userID, filename string, file multipart.File) error {
 	userDir, err := ensureUserDirectory(userID)
 	if err != nil {

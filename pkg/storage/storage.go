@@ -77,6 +77,14 @@ const (
 			WHERE user_id = $1 and filename = $2
 		)
 	`
+
+	CheckUserSchema = `
+		SELECT EXISTS (
+			SELECT 1
+			FROM users
+			WHERE id = $1
+		)
+	`
 )
 
 func ValidateEmail(email string) bool {
