@@ -1,11 +1,10 @@
-// TODO: поменять ошибки, связать с пакетом files
-
 // sender пакет для хендлера send.
 // Нужен для отправки файлов с облака пользователю.
 package sender
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -14,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files"
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -27,7 +27,7 @@ type FileSender interface {
 func New(log *slog.Logger, fileSender FileSender) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.sender.New"
-		l := log.With(
+		log := log.With(
 			slog.String("fn", fn),
 			slog.String("requestID", middleware.GetReqID(r.Context())),
 		)
@@ -36,7 +36,7 @@ func New(log *slog.Logger, fileSender FileSender) http.HandlerFunc {
 		filename := chi.URLParam(r, "filename")
 
 		if userID == "" || filename == "" {
-			l.Error("missing user ID or filename")
+			log.Error(files.ErrMissingUserIDFilename.Error())
 			http.Error(w, "User ID and filename are required", http.StatusBadRequest)
 
 			return
@@ -44,48 +44,58 @@ func New(log *slog.Logger, fileSender FileSender) http.HandlerFunc {
 
 		exists, err := fileSender.IsFileExist(r.Context(), userID, filename)
 		if err != nil {
-			l.Error("failed to check file existence", slog.String("err", err.Error()))
+			if errors.Is(err, storage.ErrUserNotFound) {
+				log.Error(storage.ErrUserNotFound.Error())
+				http.Error(w, "User not found", http.StatusBadRequest)
+
+				return
+			}
+
+			log.Error("failed to check file existence", slog.String("err", err.Error()))
 			http.Error(w, "Failed to check file existence", http.StatusInternalServerError)
 
 			return
 		}
 
 		if !exists {
-			l.Error("file not found", slog.String("filename", filename))
+			log.Error("file not found", slog.String("filename", filename))
 			http.Error(w, "File not found", http.StatusNotFound)
 
 			return
 		}
 
-		filePath := filepath.Join(files.BaseDir, userID, filename)
-
-		file, err := os.Open(filePath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				l.Error("file not found on disk", slog.String("filename", filename))
-				http.Error(w, "File not found", http.StatusNotFound)
-
-				return
-			}
-
-			l.Error("failed to open file", slog.String("err", err.Error()))
-			http.Error(w, "Failed to open file", http.StatusInternalServerError)
-
-			return
-		}
-		defer file.Close()
-
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
-		_, err = io.Copy(w, file)
-		if err != nil {
-			l.Error("failed to send file", slog.String("err", err.Error()))
-			http.Error(w, "Failed to send file", http.StatusInternalServerError)
+		filePath := filepath.Join(files.BaseDir, userID, filename)
 
+		err = sendFile(log, filePath, w)
+		if err != nil {
 			return
 		}
 
-		l.Info("File sent successfully", slog.String("filename", filename))
+		log.Info("File sent successfully", slog.String("filename", filename))
 	}
+}
+
+// sendFile функция для отправки файла пользователю.
+func sendFile(log *slog.Logger, filePath string, w http.ResponseWriter) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Error("failed to open file", slog.String("err", err.Error()))
+		http.Error(w, "Failed to open file", http.StatusInternalServerError)
+
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	_, err = io.Copy(w, file)
+	if err != nil {
+		log.Error("failed to send file", slog.String("err", err.Error()))
+		http.Error(w, "Failed to send file", http.StatusInternalServerError)
+
+		return fmt.Errorf("failed to send file: %w", err)
+	}
+
+	return nil
 }

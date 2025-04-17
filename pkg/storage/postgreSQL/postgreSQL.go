@@ -107,31 +107,10 @@ func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvai
 	return nil
 }
 
-// TODO: перепроверить под новый стиль кода
 // NewFile метод сохранения информации о файле в БД.
 func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize int64) error {
 	const fn = "postgresql.storage.NewFile"
 	log := s.log.With("fn", fn, "userID", userID)
-
-	isUserExist, err := s.isUserExist(ctx, userID)
-	if err != nil {
-		log.Error("err in func isUserExist", slog.String("err", err.Error()))
-
-		return fmt.Errorf("%s: %w", fn, err)
-	}
-
-	if !isUserExist {
-		log.Error("fail save file, user not found")
-
-		return fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
-	}
-
-	err = s.isHasSpace(ctx, userID, fileSize)
-	if err != nil {
-		log.Error("err in func isHasSpace", slog.String("err", err.Error()))
-
-		return fmt.Errorf("%s: %w", fn, err)
-	}
 
 	isFileExist, err := s.IsFileExist(ctx, userID, filename)
 	if err != nil {
@@ -144,6 +123,13 @@ func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize
 		log.Error("fail save file, file exists")
 
 		return fmt.Errorf("%s: %w", fn, storage.ErrFileExists)
+	}
+
+	err = s.isHasSpace(ctx, userID, fileSize)
+	if err != nil {
+		log.Error("err in func isHasSpace", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
 	_, err = s.db.Exec(ctx, storage.AddSpaceTakenSchema, userID, fileSize)
@@ -170,22 +156,22 @@ func (s *Storage) DeleteFile(ctx context.Context, userID, filename string) error
 	const fn = "postgresql.storage.DeleteFile"
 	log := s.log.With("fn", fn, "userID", userID, "filename", filename)
 
-	isUserExist, err := s.isUserExist(ctx, userID)
+	isFileExist, err := s.IsFileExist(ctx, userID, filename)
 	if err != nil {
-		log.Error("failed to check user", slog.String("err", err.Error()))
+		log.Error("err in func isFileExist", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	if !isUserExist {
-		log.Error(storage.ErrUserNotFound.Error())
+	if !isFileExist {
+		log.Error(storage.ErrFileNotFound.Error())
 
-		return fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
+		return fmt.Errorf("%s: %w", fn, storage.ErrFileNotFound)
 	}
 
 	filesize, err := s.fileSize(ctx, userID, filename)
 	if err != nil {
-		log.Error("fail to failed to get filesize", slog.String("err", err.Error()))
+		log.Error("fail to get filesize", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
 	}
@@ -254,11 +240,25 @@ func (s *Storage) UserID(ctx context.Context, email string) (string, error) {
 }
 
 // IsFileExist метод для проверки существования файла.
+// Также проверяет существование пользователя.
 func (s *Storage) IsFileExist(ctx context.Context, userID, filename string) (bool, error) {
 	const fn = "postgresql.storage.isFileExist"
 	log := s.log.With("fn", fn, "userID", userID)
 
 	var IsFileExist bool
+
+	isUserExist, err := s.isUserExist(ctx, userID)
+	if err != nil {
+		log.Error("failed to check user", slog.String("err", err.Error()))
+
+		return IsFileExist, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if !isUserExist {
+		log.Error(storage.ErrUserNotFound.Error())
+
+		return IsFileExist, fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
+	}
 
 	row := s.db.QueryRow(ctx, storage.CheckFileSchema, userID, filename)
 	if err := row.Scan(&IsFileExist); err != nil {
@@ -310,6 +310,7 @@ func (s *Storage) isUserExist(ctx context.Context, userID string) (bool, error) 
 	return isUserExist, nil
 }
 
+// fileSize метод для получения размера файла.
 func (s *Storage) fileSize(ctx context.Context, userID, filename string) (int64, error) {
 	const fn = "postgresql.storage.fileSize"
 	log := s.log.With(

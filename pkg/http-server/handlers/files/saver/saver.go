@@ -1,7 +1,3 @@
-// TODO: поменять baseDir
-// поменять ошибки, связать с пакетом files
-// Refactor: добавить метод IsFileExists
-
 // Saver пакет для хендлера save.
 // Нужен, чтобы сохранять файлы на облаке.
 package saver
@@ -125,6 +121,7 @@ func saveFileToDisk(userID, filename string, file multipart.File) error {
 	return nil
 }
 
+// removeMultipartFiles фунция удаления временных файлов из папки /tmp.
 func removeMultipartFiles(log *slog.Logger, r *http.Request) {
 	err := r.MultipartForm.RemoveAll()
 	if err != nil {
@@ -135,6 +132,8 @@ func removeMultipartFiles(log *slog.Logger, r *http.Request) {
 	}
 }
 
+// checkErrFromDB процедура для проверки ошибки из ДБ.
+// Эта часть кода была вынесена в отдельную процедуру из-за своих размеров.
 func checkErrFromDB(err error, log *slog.Logger, w http.ResponseWriter) {
 	if errors.Is(err, storage.ErrFileExists) {
 		log.Error(err.Error())

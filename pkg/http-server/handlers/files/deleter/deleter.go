@@ -1,3 +1,5 @@
+// deleter пакет для хендлера delete.
+// Нужен, чтобы удалять файлы на облаке.
 package deleter
 
 import (
@@ -14,11 +16,12 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// FileDeleter интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
 type FileDeleter interface {
 	DeleteFile(ctx context.Context, userID, filename string) error
 }
 
-// New функция для создания хендлера send.
+// New функция для создания хендлера delete.
 func New(log *slog.Logger, fileDeleter FileDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.deleter.New"
@@ -47,7 +50,7 @@ func New(log *slog.Logger, fileDeleter FileDeleter) http.HandlerFunc {
 			}
 
 			if errors.Is(err, storage.ErrFileNotFound) {
-				log.Error(storage.ErrFileExists.Error())
+				log.Error(storage.ErrFileNotFound.Error())
 				http.Error(w, "File not found", http.StatusNotFound)
 
 				return
