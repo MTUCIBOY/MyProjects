@@ -41,7 +41,13 @@ const (
 
 	NewFileSchema = `
 		INSERT INTO files (user_id, filename, size)
-		VALUES ($1, $2, $3)
+		VALUES ($1, $2, $3);
+	`
+
+	ChangeSpaceTakenSchema = `
+		UPDATE users 
+		SET space_taken  = space_taken + $2
+		WHERE id = $1;
 	`
 
 	DeleteUserSchema = `

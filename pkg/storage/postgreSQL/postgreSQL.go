@@ -110,40 +110,30 @@ func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvai
 // NewFile метод сохранения информации о файле в БД.
 func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize int64) error {
 	const fn = "postgresql.storage.NewFile"
-	log := s.log.With("fn", fn, "id", userID)
+	log := s.log.With("fn", fn, "userID", userID)
 
-	var (
-		IsHasSpace  bool
-		IsFileExist bool
-	)
-
-	row := s.db.QueryRow(ctx, storage.CheckSpaceSchema, fileSize, userID)
-	if err := row.Scan(&IsHasSpace); err != nil {
-		log.Error("fail to check space", slog.String("err", err.Error()))
+	err := s.isHasSpace(ctx, userID, fileSize)
+	if err != nil {
+		log.Error("err in func isHasSpace", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	if !IsHasSpace {
-		log.Error("fail to save file, not enough space")
-
-		return fmt.Errorf("%s: %w", fn, storage.ErrNotEnoughSpace)
-	}
-
-	row = s.db.QueryRow(ctx, storage.CheckFileSchema, userID, filename)
-	if err := row.Scan(&IsFileExist); err != nil {
-		log.Error("fail to check space", slog.String("err", err.Error()))
+	err = s.isFileExist(ctx, userID, filename)
+	if err != nil {
+		log.Error("err in func isFileExist", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	if IsFileExist {
-		log.Error("fail to save file, file exists")
+	_, err = s.db.Exec(ctx, storage.ChangeSpaceTakenSchema, userID, fileSize)
+	if err != nil {
+		log.Error("fail to change space_taken in table", slog.String("err", err.Error()))
 
-		return fmt.Errorf("%s: %w", fn, storage.ErrFileExists)
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	_, err := s.db.Exec(ctx, storage.NewFileSchema, userID, filename, fileSize)
+	_, err = s.db.Exec(ctx, storage.NewFileSchema, userID, filename, fileSize)
 	if err != nil {
 		log.Error("fail to insert new file to table", slog.String("err", err.Error()))
 
@@ -158,7 +148,7 @@ func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize
 // DeleteFile метод для удаления информации о файле из БД.
 func (s *Storage) DeleteFile(ctx context.Context, userID, filename string) error {
 	const fn = "postgresql.storage.DeleteFile"
-	log := s.log.With("fn", fn, "id", userID)
+	log := s.log.With("fn", fn, "userID", userID)
 
 	commandTag, err := s.db.Exec(ctx, storage.DeleteFileSchema, userID, filename)
 	if err != nil {
@@ -181,7 +171,7 @@ func (s *Storage) DeleteFile(ctx context.Context, userID, filename string) error
 // DeleteUser метод для удаления информации о пользователе из БД.
 func (s *Storage) DeleteUser(ctx context.Context, userID string) error {
 	const fn = "postgresql.storage.DeleteUser"
-	log := s.log.With("fn", fn, "id", userID)
+	log := s.log.With("fn", fn, "userID", userID)
 
 	commandTag, err := s.db.Exec(ctx, storage.DeleteUserSchema, userID)
 	if err != nil {
@@ -214,4 +204,48 @@ func (s *Storage) UserID(ctx context.Context, email string) (string, error) {
 	}
 
 	return userID, nil
+}
+
+func (s *Storage) isHasSpace(ctx context.Context, userID string, fileSize int64) error {
+	const fn = "postgresql.storage.isHasSpace"
+	log := s.log.With("fn", fn, "userID", userID)
+
+	var IsHasSpace bool
+
+	row := s.db.QueryRow(ctx, storage.CheckSpaceSchema, fileSize, userID)
+	if err := row.Scan(&IsHasSpace); err != nil {
+		log.Error("fail to check space", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if !IsHasSpace {
+		log.Error("fail to save file, not enough space")
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrNotEnoughSpace)
+	}
+
+	return nil
+}
+
+func (s *Storage) isFileExist(ctx context.Context, userID, filename string) error {
+	const fn = "postgresql.storage.isFileExist"
+	log := s.log.With("fn", fn, "userID", userID)
+
+	var IsFileExist bool
+
+	row := s.db.QueryRow(ctx, storage.CheckFileSchema, userID, filename)
+	if err := row.Scan(&IsFileExist); err != nil {
+		log.Error("fail to check space", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if IsFileExist {
+		log.Error("fail to save file, file exists")
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrFileExists)
+	}
+
+	return nil
 }
