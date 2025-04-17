@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/deleter"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/saver"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/sender"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
@@ -42,6 +43,7 @@ func main() {
 
 	router.Post("/{userID}", saver.New(log, &db))
 	router.Get("/{userID}/{filename}", sender.New(log, &db))
+	router.Delete("/{userID}/{filename}", deleter.New(log, &db))
 
 	log.Info("Start server", slog.Any("cfg", cfg))
 	srv := &http.Server{

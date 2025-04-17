@@ -107,6 +107,7 @@ func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvai
 	return nil
 }
 
+// TODO: перепроверить под новый стиль кода
 // NewFile метод сохранения информации о файле в БД.
 func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize int64) error {
 	const fn = "postgresql.storage.NewFile"
@@ -145,7 +146,7 @@ func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize
 		return fmt.Errorf("%s: %w", fn, storage.ErrFileExists)
 	}
 
-	_, err = s.db.Exec(ctx, storage.ChangeSpaceTakenSchema, userID, fileSize)
+	_, err = s.db.Exec(ctx, storage.AddSpaceTakenSchema, userID, fileSize)
 	if err != nil {
 		log.Error("fail to change space_taken in table", slog.String("err", err.Error()))
 
@@ -164,11 +165,37 @@ func (s *Storage) NewFile(ctx context.Context, userID, filename string, fileSize
 	return nil
 }
 
-// TODO: refactor
 // DeleteFile метод для удаления информации о файле из БД.
 func (s *Storage) DeleteFile(ctx context.Context, userID, filename string) error {
 	const fn = "postgresql.storage.DeleteFile"
-	log := s.log.With("fn", fn, "userID", userID)
+	log := s.log.With("fn", fn, "userID", userID, "filename", filename)
+
+	isUserExist, err := s.isUserExist(ctx, userID)
+	if err != nil {
+		log.Error("failed to check user", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if !isUserExist {
+		log.Error(storage.ErrUserNotFound.Error())
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
+	}
+
+	filesize, err := s.fileSize(ctx, userID, filename)
+	if err != nil {
+		log.Error("fail to failed to get filesize", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	_, err = s.db.Exec(ctx, storage.SubSpaceTakenSchema, userID, filesize)
+	if err != nil {
+		log.Error("fail to update space_taken", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
 
 	commandTag, err := s.db.Exec(ctx, storage.DeleteFileSchema, userID, filename)
 	if err != nil {
@@ -281,4 +308,24 @@ func (s *Storage) isUserExist(ctx context.Context, userID string) (bool, error) 
 	}
 
 	return isUserExist, nil
+}
+
+func (s *Storage) fileSize(ctx context.Context, userID, filename string) (int64, error) {
+	const fn = "postgresql.storage.fileSize"
+	log := s.log.With(
+		slog.String("fn", fn),
+		slog.String("userID", userID),
+		slog.String("filename", filename),
+	)
+
+	var filesize int64
+
+	err := s.db.QueryRow(ctx, storage.GetFilesizeSchema, userID, filename).Scan(&filesize)
+	if err != nil {
+		log.Error("failed to get file size", slog.String("err", err.Error()))
+
+		return 0, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return filesize, nil
 }

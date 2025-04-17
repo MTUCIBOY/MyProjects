@@ -44,9 +44,15 @@ const (
 		VALUES ($1, $2, $3);
 	`
 
-	ChangeSpaceTakenSchema = `
+	AddSpaceTakenSchema = `
 		UPDATE users 
 		SET space_taken  = space_taken + $2
+		WHERE id = $1;
+	`
+
+	SubSpaceTakenSchema = `
+		UPDATE users 
+		SET space_taken  = space_taken - $2
 		WHERE id = $1;
 	`
 
@@ -84,6 +90,12 @@ const (
 			FROM users
 			WHERE id = $1
 		)
+	`
+
+	GetFilesizeSchema = `
+		SELECT size
+		FROM files f 
+		WHERE user_id = $1 AND filename = $2
 	`
 )
 

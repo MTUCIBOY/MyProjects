@@ -1,4 +1,4 @@
-// TODO: поменять baseDir
+// TODO: поменять ошибки, связать с пакетом files
 
 // sender пакет для хендлера send.
 // Нужен для отправки файлов с облака пользователю.
@@ -13,15 +13,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-const baseDir = "./CloudBase"
-
 // FileSender интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
 type FileSender interface {
-	DeleteFile(ctx context.Context, userID, filename string) error
 	IsFileExist(ctx context.Context, userID, filename string) (bool, error)
 }
 
@@ -59,7 +57,7 @@ func New(log *slog.Logger, fileSender FileSender) http.HandlerFunc {
 			return
 		}
 
-		filePath := filepath.Join(baseDir, userID, filename)
+		filePath := filepath.Join(files.BaseDir, userID, filename)
 
 		file, err := os.Open(filePath)
 		if err != nil {
