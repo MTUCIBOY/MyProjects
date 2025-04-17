@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -24,7 +25,6 @@ import (
 
 const (
 	mB10       = 10 << 20
-	baseDir    = "./CloudBase"
 	fileRights = 0o750
 )
 
@@ -37,67 +37,53 @@ type FileSaver interface {
 func New(log *slog.Logger, fileSaver FileSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.saver.New"
-		l := log.With(
+		log := log.With(
 			slog.String("fn", fn),
 			slog.String("requestID", middleware.GetReqID(r.Context())),
 		)
 
+		userID := chi.URLParam(r, "userID")
+		if userID == "" {
+			log.Error(files.ErrMissingUserID.Error())
+			http.Error(w, "User ID is required", http.StatusBadRequest)
+
+			return
+		}
+
 		err := r.ParseMultipartForm(mB10)
 		if err != nil {
-			l.Error("failed to parse multipart form", slog.String("err", err.Error()))
+			log.Error("failed to parse multipart form", slog.String("err", err.Error()))
 			http.Error(w, "Unable to parse form", http.StatusBadRequest)
 
 			return
 		}
-		defer r.MultipartForm.RemoveAll()
+		defer removeMultipartFiles(log, r)
 
 		file, handler, err := r.FormFile("file")
 		if err != nil {
-			l.Error("failed to retrieve file from form", slog.String("err", err.Error()))
+			log.Error("failed to retrieve file from form", slog.String("err", err.Error()))
 			http.Error(w, "Unable to retrieve file", http.StatusBadRequest)
 
 			return
 		}
 		defer file.Close()
 
-		userID := chi.URLParam(r, "userID")
-		if userID == "" {
-			l.Error("missing user ID")
-			http.Error(w, "User ID is required", http.StatusBadRequest)
-
-			return
-		}
-
 		err = fileSaver.NewFile(r.Context(), userID, handler.Filename, handler.Size)
 		if err != nil {
-			l.Error("failed to save file info to DB", slog.String("err", err.Error()))
-
-			if errors.Is(err, storage.ErrFileExists) {
-				http.Error(w, "Failed to save file, file exists", http.StatusBadRequest)
-
-				return
-			}
-
-			if errors.Is(err, storage.ErrNotEnoughSpace) {
-				http.Error(w, "Failed to save file, not enough space", http.StatusBadRequest)
-
-				return
-			}
-
-			http.Error(w, "Failed to save file metadata", http.StatusInternalServerError)
+			checkErrFromDB(err, log, w)
 
 			return
 		}
 
 		err = saveFileToDisk(userID, handler.Filename, file)
 		if err != nil {
-			l.Error("failed to save file", slog.String("err", err.Error()))
+			log.Error("failed to save file on disk", slog.String("err", err.Error()))
 			http.Error(w, "Failed to save file", http.StatusInternalServerError)
 
 			return
 		}
 
-		l.Info("File is saved")
+		log.Info("File is saved")
 
 		w.WriteHeader(http.StatusCreated)
 	}
@@ -105,8 +91,7 @@ func New(log *slog.Logger, fileSaver FileSaver) http.HandlerFunc {
 
 // ensureUserDirectory функция для проверки и создания папки пользователя на облаке.
 func ensureUserDirectory(userID string) (string, error) {
-	userDir := filepath.Join(baseDir, userID)
-
+	userDir := filepath.Join(files.BaseDir, userID)
 	if _, err := os.Stat(userDir); os.IsNotExist(err) {
 		err := os.MkdirAll(userDir, fileRights)
 		if err != nil {
@@ -138,4 +123,39 @@ func saveFileToDisk(userID, filename string, file multipart.File) error {
 	}
 
 	return nil
+}
+
+func removeMultipartFiles(log *slog.Logger, r *http.Request) {
+	err := r.MultipartForm.RemoveAll()
+	if err != nil {
+		log.Warn(
+			"err when deleted multipart files",
+			slog.String("err", err.Error()),
+		)
+	}
+}
+
+func checkErrFromDB(err error, log *slog.Logger, w http.ResponseWriter) {
+	if errors.Is(err, storage.ErrFileExists) {
+		log.Error(err.Error())
+		http.Error(w, "Failed to save file, file exists", http.StatusBadRequest)
+
+		return
+	}
+
+	if errors.Is(err, storage.ErrNotEnoughSpace) {
+		log.Error(err.Error())
+		http.Error(w, "Failed to save file, not enough space", http.StatusBadRequest)
+
+		return
+	}
+
+	if errors.Is(err, storage.ErrUserNotFound) {
+		log.Error(err.Error())
+		http.Error(w, "Failed to save file, user not found", http.StatusBadRequest)
+
+		return
+	}
+
+	http.Error(w, "Failed to save file metadata", http.StatusInternalServerError)
 }
