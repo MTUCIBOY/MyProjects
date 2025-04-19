@@ -99,6 +99,12 @@ const (
 		FROM files f 
 		WHERE user_id = $1 AND filename = $2
 	`
+
+	GetAllFilesSchema = `
+		SELECT filename
+		FROM files
+		WHERE user_id = $1
+	`
 )
 
 // ValidateEmail функция для валидации почты.

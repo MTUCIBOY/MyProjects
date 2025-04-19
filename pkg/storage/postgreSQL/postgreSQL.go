@@ -65,6 +65,7 @@ func (s *Storage) Close(ctx context.Context) {
 	s.log.Info("Connection to DB is closed")
 }
 
+// TODO: check
 // NewUser метод для сохранения нового пользователя в БД.
 // spaceAvaible пишется в байтах.
 func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvaible int64) error {
@@ -201,6 +202,7 @@ func (s *Storage) DeleteFile(ctx context.Context, userID, filename string) error
 	return nil
 }
 
+// TODO: check
 // DeleteUser метод для удаления информации о пользователе из БД.
 func (s *Storage) DeleteUser(ctx context.Context, userID string) error {
 	const fn = "postgresql.storage.DeleteUser"
@@ -329,4 +331,56 @@ func (s *Storage) fileSize(ctx context.Context, userID, filename string) (int64,
 	}
 
 	return filesize, nil
+}
+
+func (s *Storage) AllFiles(ctx context.Context, userID string) ([]string, error) {
+	const fn = "postgresql.storage.AllFiles"
+	log := s.log.With(
+		slog.String("fn", fn),
+		slog.String("userID", userID),
+	)
+
+	isUserExist, err := s.isUserExist(ctx, userID)
+	if err != nil {
+		log.Error("failed to check user", slog.String("err", err.Error()))
+
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if !isUserExist {
+		log.Error(storage.ErrUserNotFound.Error())
+
+		return nil, fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
+	}
+
+	rows, err := s.db.Query(ctx, storage.GetAllFilesSchema, userID)
+	if err != nil {
+		log.Error("failed to get files from table", slog.String("err", err.Error()))
+
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+	defer rows.Close()
+
+	var (
+		filenames []string
+		filename  string
+	)
+
+	for rows.Next() {
+		if err := rows.Scan(&filename); err != nil {
+			log.Error("failed to scan row", slog.String("err", err.Error()))
+
+			return nil, fmt.Errorf("%s: %w", fn, err)
+		}
+
+		filenames = append(filenames, filename)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Error("err after closed rows", slog.String("err", err.Error()))
+
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return filenames, nil
 }

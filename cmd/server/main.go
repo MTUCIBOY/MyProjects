@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/deleter"
+	infogeter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/infoGeter"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/saver"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/sender"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
@@ -32,6 +34,8 @@ func main() {
 
 	log.Info("Start DB is success")
 
+	fmt.Println(db.AllFiles(ctx, "e868dadd-330c-4153-8ecf-813cef6f7f50"))
+
 	log.Info("Start router")
 
 	router := chi.NewRouter()
@@ -43,6 +47,7 @@ func main() {
 
 	router.Post("/{userID}", saver.New(log, &db))
 	router.Get("/{userID}/{filename}", sender.New(log, &db))
+	router.Get("/{userID}", infogeter.New(log, &db))
 	router.Delete("/{userID}/{filename}", deleter.New(log, &db))
 
 	log.Info("Start server", slog.Any("cfg", cfg))
