@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	ErrFileNotFound   = errors.New("file not found")
-	ErrUserNotFound   = errors.New("user not found")
-	ErrNotUniqueEmail = errors.New("this email already exists")
-	ErrInvalidParams  = errors.New("invalid params")
-	ErrNotEnoughSpace = errors.New("not enough space")
-	ErrFileExists     = errors.New("file exists")
+	ErrFileNotFound      = errors.New("file not found")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrInvalidParams     = errors.New("invalid params")
+	ErrNotEnoughSpace    = errors.New("not enough space")
+	ErrFileExists        = errors.New("file exists")
+	ErrUserAlreadyExists = errors.New("user already exists")
 )
 
 // Скрипты для работы с таблицами.
@@ -113,4 +113,12 @@ func ValidateEmail(email string) bool {
 	re := regexp.MustCompile(emailRegex)
 
 	return re.MatchString(email)
+}
+
+func ValidUserParams(email, password string, spaceAvailable int64) bool {
+	if !ValidateEmail(email) || password == "" || spaceAvailable < 1 {
+		return false
+	}
+
+	return true
 }

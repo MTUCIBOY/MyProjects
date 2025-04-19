@@ -65,17 +65,16 @@ func (s *Storage) Close(ctx context.Context) {
 	s.log.Info("Connection to DB is closed")
 }
 
-// TODO: check
 // NewUser метод для сохранения нового пользователя в БД.
-// spaceAvaible пишется в байтах.
-func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvaible int64) error {
+// spaceAvailable пишется в байтах.
+func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvailable int64) error {
 	const fn = "postgresql.storage.NewUser"
 	log := s.log.With("fn", fn, "email", email)
 
-	if spaceAvaible < 1 || !storage.ValidateEmail(email) {
+	if !storage.ValidUserParams(email, password, spaceAvailable) {
 		log.Error(
 			"Invalid params",
-			slog.Int64("spaceAvaible", spaceAvaible),
+			slog.Int64("spaceAvailable", spaceAvailable),
 			slog.Bool("email validator", storage.ValidateEmail(email)),
 		)
 
@@ -89,13 +88,13 @@ func (s *Storage) NewUser(ctx context.Context, email, password string, spaceAvai
 		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	_, err = s.db.Exec(ctx, storage.NewUserSchema, email, passHash, spaceAvaible)
+	_, err = s.db.Exec(ctx, storage.NewUserSchema, email, passHash, spaceAvailable)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == NotUniqueEmail {
 			log.Error("User already exist", slog.String("err", err.Error()))
 
-			return fmt.Errorf("%s: %w", fn, storage.ErrNotUniqueEmail)
+			return fmt.Errorf("%s: %w", fn, storage.ErrUserAlreadyExists)
 		}
 
 		log.Error("fail to insert new user to table", slog.String("err", err.Error()))

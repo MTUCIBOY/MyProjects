@@ -11,6 +11,7 @@ import (
 	infogeter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/infoGeter"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/saver"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/sender"
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/registration"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
 	postgresql "github.com/MTUCIBOY/MyProject/VKR/pkg/storage/postgreSQL"
 	"github.com/go-chi/chi/v5"
@@ -45,9 +46,12 @@ func main() {
 		middleware.Recoverer,
 	)
 
-	router.Post("/{userID}", saver.New(log, &db))
-	router.Get("/{userID}/{filename}", sender.New(log, &db))
 	router.Get("/{userID}", infogeter.New(log, &db))
+	router.Get("/{userID}/{filename}", sender.New(log, &db))
+
+	router.Post("/{userID}", saver.New(log, &db))
+	router.Post("/registration", registration.New(log, &db))
+
 	router.Delete("/{userID}/{filename}", deleter.New(log, &db))
 
 	log.Info("Start server", slog.Any("cfg", cfg))
