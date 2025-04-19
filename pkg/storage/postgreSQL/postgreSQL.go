@@ -332,6 +332,7 @@ func (s *Storage) fileSize(ctx context.Context, userID, filename string) (int64,
 	return filesize, nil
 }
 
+// AllFiles метод для получения названия всех файлов пользователя.
 func (s *Storage) AllFiles(ctx context.Context, userID string) ([]string, error) {
 	const fn = "postgresql.storage.AllFiles"
 	log := s.log.With(

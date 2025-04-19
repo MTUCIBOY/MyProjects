@@ -1,3 +1,5 @@
+// registration пакет для хендлера registration.
+// Регистрирует пользователей, информацию получает из JSON-файла.
 package registration
 
 import (
@@ -16,6 +18,7 @@ type RegUser interface {
 	NewUser(ctx context.Context, email, password string, spaceAvailable int64) error
 }
 
+// RegRequest структура запроса пользователя. Нужна для парсинга тела запроса.
 type RegRequest struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`

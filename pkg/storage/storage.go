@@ -115,6 +115,7 @@ func ValidateEmail(email string) bool {
 	return re.MatchString(email)
 }
 
+// ValidUserParams функция для валидации параметров при регестрации пользователя.
 func ValidUserParams(email, password string, spaceAvailable int64) bool {
 	if !ValidateEmail(email) || password == "" || spaceAvailable < 1 {
 		return false
