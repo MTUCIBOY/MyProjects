@@ -105,6 +105,13 @@ const (
 		FROM files
 		WHERE user_id = $1
 	`
+
+	// #nosec G101
+	GetUserPasswordHashSchema = `
+		SELECT password_hash
+		FROM users
+		WHERE id = $1
+	`
 )
 
 // ValidateEmail функция для валидации почты.

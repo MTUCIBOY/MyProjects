@@ -1,6 +1,6 @@
-// deleter пакет для хендлера delete.
+// filedeleter пакет для хендлера delete.
 // Нужен, чтобы удалять файлы на облаке.
-package deleter
+package filedeleter
 
 import (
 	"context"
@@ -35,7 +35,7 @@ func New(log *slog.Logger, fileDeleter FileDeleter) http.HandlerFunc {
 
 		if userID == "" || filename == "" {
 			log.Error(files.ErrMissingUserIDFilename.Error())
-			http.Error(w, "User ID and filename is required", http.StatusBadRequest)
+			http.Error(w, "User ID and filename are required", http.StatusBadRequest)
 
 			return
 		}

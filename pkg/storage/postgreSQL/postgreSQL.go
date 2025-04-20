@@ -201,23 +201,16 @@ func (s *Storage) DeleteFile(ctx context.Context, userID, filename string) error
 	return nil
 }
 
-// TODO: check
 // DeleteUser метод для удаления информации о пользователе из БД.
 func (s *Storage) DeleteUser(ctx context.Context, userID string) error {
 	const fn = "postgresql.storage.DeleteUser"
 	log := s.log.With("fn", fn, "userID", userID)
 
-	commandTag, err := s.db.Exec(ctx, storage.DeleteUserSchema, userID)
+	_, err := s.db.Exec(ctx, storage.DeleteUserSchema, userID)
 	if err != nil {
 		log.Error("fail to delete user to table", slog.String("err", err.Error()))
 
 		return fmt.Errorf("%s: %w", fn, err)
-	}
-
-	if commandTag.RowsAffected() == 0 {
-		log.Error(storage.ErrUserNotFound.Error())
-
-		return fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
 	}
 
 	log.Info("User is deleted from DB")
@@ -383,4 +376,43 @@ func (s *Storage) AllFiles(ctx context.Context, userID string) ([]string, error)
 	}
 
 	return filenames, nil
+}
+
+// ComparePassword метод для проверки пароля пользователя.
+func (s *Storage) ComparePassword(ctx context.Context, userID, password string) error {
+	const fn = "postgresql.storage.AllFiles"
+	log := s.log.With(
+		slog.String("fn", fn),
+	)
+
+	isUserExist, err := s.isUserExist(ctx, userID)
+	if err != nil {
+		log.Error("failed to check user", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if !isUserExist {
+		log.Error(storage.ErrUserNotFound.Error())
+
+		return fmt.Errorf("%s: %w", fn, storage.ErrUserNotFound)
+	}
+
+	var passHash []byte
+
+	err = s.db.QueryRow(ctx, storage.GetUserPasswordHashSchema, userID).Scan(&passHash)
+	if err != nil {
+		log.Error("failed to get password hash", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	err = bcrypt.CompareHashAndPassword(passHash, []byte(password))
+	if err != nil {
+		log.Error("failed to compare pass and passHash", slog.String("err", err.Error()))
+
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return nil
 }

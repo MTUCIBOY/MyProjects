@@ -2,16 +2,16 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
-	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/deleter"
+	filedeleter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/fileDeleter"
 	infogeter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/infoGeter"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/saver"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/sender"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/registration"
+	userdeleter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/userDeleter"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
 	postgresql "github.com/MTUCIBOY/MyProject/VKR/pkg/storage/postgreSQL"
 	"github.com/go-chi/chi/v5"
@@ -35,8 +35,6 @@ func main() {
 
 	log.Info("Start DB is success")
 
-	fmt.Println(db.AllFiles(ctx, "e868dadd-330c-4153-8ecf-813cef6f7f50"))
-
 	log.Info("Start router")
 
 	router := chi.NewRouter()
@@ -52,7 +50,8 @@ func main() {
 	router.Post("/{userID}", saver.New(log, &db))
 	router.Post("/registration", registration.New(log, &db))
 
-	router.Delete("/{userID}/{filename}", deleter.New(log, &db))
+	router.Delete("/{userID}/{filename}", filedeleter.New(log, &db))
+	router.Delete("/{userID}", userdeleter.New(log, &db))
 
 	log.Info("Start server", slog.Any("cfg", cfg))
 	srv := &http.Server{
