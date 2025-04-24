@@ -1,3 +1,5 @@
+// auth пакет для аутентифакации.
+// Создает токен из секретного ключа из переменной окружения.
 package auth
 
 import (
@@ -10,13 +12,16 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 )
 
+// TokenAuth переменная для создания и проверки JWT.
 var TokenAuth *jwtauth.JWTAuth
 
+// init создание TokenAuth.
 func init() {
 	secretKey := []byte(os.Getenv("JWT_SECRET"))
 	TokenAuth = jwtauth.New("HS256", secretKey, nil)
 }
 
+// CompareUUIDMiddleware мидлвейр для проверки UUID из URL и из JWT.
 func CompareUUIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		const fn = "middleware.auth.CompareUUIDMiddleware"

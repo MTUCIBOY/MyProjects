@@ -28,6 +28,12 @@ type Config struct {
 	// Переменная, задающая время жизни JWT.
 	TokenTTL time.Duration `env-required:"true" yaml:"token_ttl"`
 
+	// Переменная пути сертификата.
+	CertPath string `env-required:"true" yaml:"cert_path"`
+
+	// Переменная пути приватного ключа.
+	KeyPath string `env-required:"true" yaml:"key_path"`
+
 	// Настройки HTTP-сервера.
 	HTTPServer `yaml:"http_server"`
 }

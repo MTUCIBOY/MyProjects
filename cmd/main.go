@@ -28,16 +28,28 @@ func main() {
 
 	log.Info("Start app", slog.Any("config", cfg))
 
+	db := initDB(ctx, log, cfg)
+	defer db.Close(ctx)
+
+	router := initRouter(log, db, cfg)
+
+	initServer(log, router, cfg)
+}
+
+func initDB(ctx context.Context, log *slog.Logger, cfg *config.Config) *postgresql.Storage {
 	log.Info("Start DB")
 
 	db, err := postgresql.New(ctx, log, cfg.StorageDSN)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close(ctx)
 
 	log.Info("Start DB is success")
 
+	return &db
+}
+
+func initRouter(log *slog.Logger, db *postgresql.Storage, cfg *config.Config) *chi.Mux {
 	log.Info("Start router")
 
 	router := chi.NewRouter()
@@ -51,18 +63,22 @@ func main() {
 		r.Use(jwtauth.Verifier(auth.TokenAuth))
 		r.Use(auth.CompareUUIDMiddleware)
 
-		r.Get("/{userID}", infogeter.New(log, &db))
-		r.Get("/{userID}/{filename}", sender.New(log, &db))
+		r.Get("/{userID}", infogeter.New(log, db))
+		r.Get("/{userID}/{filename}", sender.New(log, db))
 
-		r.Post("/{userID}", saver.New(log, &db))
+		r.Post("/{userID}", saver.New(log, db))
 
-		r.Delete("/{userID}/{filename}", filedeleter.New(log, &db))
-		r.Delete("/{userID}", userdeleter.New(log, &db))
+		r.Delete("/{userID}/{filename}", filedeleter.New(log, db))
+		r.Delete("/{userID}", userdeleter.New(log, db))
 	})
 
-	router.Post("/login", login.New(log, &db))
-	router.Post("/registration", registration.New(log, &db))
+	router.Post("/login", login.New(log, db, cfg.TokenTTL))
+	router.Post("/registration", registration.New(log, db))
 
+	return router
+}
+
+func initServer(log *slog.Logger, router *chi.Mux, cfg *config.Config) {
 	log.Info("Start server", slog.Any("cfg", cfg))
 	srv := &http.Server{
 		Addr:         cfg.Address,
@@ -72,7 +88,7 @@ func main() {
 		IdleTimeout:  cfg.IdleTimeout,
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
+	if err := srv.ListenAndServeTLS(cfg.CertPath, cfg.KeyPath); err != nil {
 		log.Error("failed to start server", slog.String("err", err.Error()))
 	}
 

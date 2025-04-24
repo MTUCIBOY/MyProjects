@@ -1,3 +1,5 @@
+// login пакет для хендлера login.
+// Создает JWT для пользователя для получения доступа к базе.
 package login
 
 import (
@@ -11,17 +13,20 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// loginUser интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
 type loginUser interface {
 	UserID(ctx context.Context, email string) (string, error)
 	ComparePassword(ctx context.Context, userID, password string) error
 }
 
+// loginRequest структура запроса пользователя. Нужна для парсинга тела запроса.
 type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-func New(log *slog.Logger, loginUser loginUser) http.HandlerFunc {
+// New функция для создания хендлера login.
+func New(log *slog.Logger, loginUser loginUser, tokenTTL time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.users.login.New"
 		log := log.With(
@@ -54,7 +59,7 @@ func New(log *slog.Logger, loginUser loginUser) http.HandlerFunc {
 
 		_, tokenString, err := auth.TokenAuth.Encode(map[string]any{
 			"sub": uuid,
-			"exp": time.Now().Add(1 * time.Hour).Unix(),
+			"exp": time.Now().Add(tokenTTL).Unix(),
 		})
 		if err != nil {
 			log.Error("failed to generate JWT", slog.String("err", err.Error()))
@@ -66,6 +71,7 @@ func New(log *slog.Logger, loginUser loginUser) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
 			"token": tokenString,
+			"uuid":  uuid,
 		})
 	}
 }
