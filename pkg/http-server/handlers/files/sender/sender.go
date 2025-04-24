@@ -19,12 +19,12 @@ import (
 )
 
 // FileSender интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
-type FileSender interface {
+type fileSender interface {
 	IsFileExist(ctx context.Context, userID, filename string) (bool, error)
 }
 
 // New функция для создания хендлера send.
-func New(log *slog.Logger, fileSender FileSender) http.HandlerFunc {
+func New(log *slog.Logger, fileSender fileSender) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.sender.New"
 		log := log.With(

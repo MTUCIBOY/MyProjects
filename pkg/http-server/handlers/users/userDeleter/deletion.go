@@ -20,19 +20,19 @@ import (
 )
 
 // DelUser интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
-type DelUser interface {
+type delUser interface {
 	DeleteUser(ctx context.Context, userID string) error
 	ComparePassword(ctx context.Context, userID, password string) error
 	AllFiles(ctx context.Context, userID string) ([]string, error)
 }
 
 // DelRequest структура запроса пользователя. Нужна для парсинга тела запроса.
-type DelRequest struct {
+type delRequest struct {
 	Password string `json:"password"`
 }
 
 // New функция для создания хендлера deletion.
-func New(log *slog.Logger, delUser DelUser) http.HandlerFunc {
+func New(log *slog.Logger, delUser delUser) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.users.userDeleter.New"
 		log := log.With(
@@ -48,7 +48,7 @@ func New(log *slog.Logger, delUser DelUser) http.HandlerFunc {
 			return
 		}
 
-		var delr DelRequest
+		var delr delRequest
 		if err := json.NewDecoder(r.Body).Decode(&delr); err != nil {
 			log.Error("failed to decode request body", slog.String("err", err.Error()))
 			http.Error(w, "Bad request", http.StatusBadRequest)

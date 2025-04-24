@@ -13,12 +13,12 @@ import (
 )
 
 // BaseInfo интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
-type BaseInfo interface {
+type baseInfo interface {
 	AllFiles(ctx context.Context, userID string) ([]string, error)
 }
 
 // New функция для создания хендлера getInfo.
-func New(log *slog.Logger, baseinfo BaseInfo) http.HandlerFunc {
+func New(log *slog.Logger, baseinfo baseInfo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.infogeter.New"
 		log := log.With(

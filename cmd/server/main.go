@@ -10,12 +10,15 @@ import (
 	infogeter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/infoGeter"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/saver"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/sender"
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/login"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/registration"
 	userdeleter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/userDeleter"
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/auth"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
 	postgresql "github.com/MTUCIBOY/MyProject/VKR/pkg/storage/postgreSQL"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/jwtauth/v5"
 )
 
 func main() {
@@ -44,14 +47,21 @@ func main() {
 		middleware.Recoverer,
 	)
 
-	router.Get("/{userID}", infogeter.New(log, &db))
-	router.Get("/{userID}/{filename}", sender.New(log, &db))
+	router.Group(func(r chi.Router) {
+		r.Use(jwtauth.Verifier(auth.TokenAuth))
+		r.Use(auth.CompareUUIDMiddleware)
 
-	router.Post("/{userID}", saver.New(log, &db))
+		r.Get("/{userID}", infogeter.New(log, &db))
+		r.Get("/{userID}/{filename}", sender.New(log, &db))
+
+		r.Post("/{userID}", saver.New(log, &db))
+
+		r.Delete("/{userID}/{filename}", filedeleter.New(log, &db))
+		r.Delete("/{userID}", userdeleter.New(log, &db))
+	})
+
+	router.Post("/login", login.New(log, &db))
 	router.Post("/registration", registration.New(log, &db))
-
-	router.Delete("/{userID}/{filename}", filedeleter.New(log, &db))
-	router.Delete("/{userID}", userdeleter.New(log, &db))
 
 	log.Info("Start server", slog.Any("cfg", cfg))
 	srv := &http.Server{

@@ -14,19 +14,19 @@ import (
 )
 
 // RegUser интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
-type RegUser interface {
+type regUser interface {
 	NewUser(ctx context.Context, email, password string, spaceAvailable int64) error
 }
 
 // RegRequest структура запроса пользователя. Нужна для парсинга тела запроса.
-type RegRequest struct {
+type regRequest struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
 	SpaceAvailable int64  `json:"space_available"`
 }
 
 // New функция для создания хендлера registration.
-func New(log *slog.Logger, regUser RegUser) http.HandlerFunc {
+func New(log *slog.Logger, regUser regUser) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.users.registration.New"
 		log := log.With(
@@ -34,7 +34,7 @@ func New(log *slog.Logger, regUser RegUser) http.HandlerFunc {
 			slog.String("requestID", middleware.GetReqID(r.Context())),
 		)
 
-		var req RegRequest
+		var req regRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Error("failed to parse request body", slog.String("err", err.Error()))
 			http.Error(w, "Invalid request body", http.StatusBadRequest)

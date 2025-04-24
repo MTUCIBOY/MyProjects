@@ -25,12 +25,12 @@ const (
 )
 
 // FileSaver интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
-type FileSaver interface {
+type fileSaver interface {
 	NewFile(ctx context.Context, userID, filename string, fileSize int64) error
 }
 
 // New функция для создания хендлера save.
-func New(log *slog.Logger, fileSaver FileSaver) http.HandlerFunc {
+func New(log *slog.Logger, fileSaver fileSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.saver.New"
 		log := log.With(

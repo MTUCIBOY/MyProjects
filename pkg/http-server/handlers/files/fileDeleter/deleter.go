@@ -17,12 +17,12 @@ import (
 )
 
 // FileDeleter интерфейс для работы с БД. Нужная абстракция, если БД будет меняться.
-type FileDeleter interface {
+type fileDeleter interface {
 	DeleteFile(ctx context.Context, userID, filename string) error
 }
 
 // New функция для создания хендлера delete.
-func New(log *slog.Logger, fileDeleter FileDeleter) http.HandlerFunc {
+func New(log *slog.Logger, fileDeleter fileDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.files.deleter.New"
 		log := log.With(
