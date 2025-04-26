@@ -2,9 +2,21 @@
 // Включает в себя общие ошибки и константы.
 package files
 
-import "errors"
+import (
+	"errors"
+	"log"
+	"os"
+)
 
-const BaseDir = "./CloudBase"
+var BaseDir string
+
+func init() {
+	BaseDir = os.Getenv("BASE_PATH")
+
+	if BaseDir == "" {
+		log.Fatal("BASE_PATH is not set")
+	}
+}
 
 var (
 	ErrMissingUserID         = errors.New("missing userID")

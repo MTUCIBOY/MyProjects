@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
 	filedeleter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files/fileDeleter"
@@ -14,10 +15,13 @@ import (
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/registration"
 	userdeleter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/userDeleter"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/auth"
+	httpheaders "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/http-headers"
+	sanitizefilename "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/sanitizeFilename"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
 	postgresql "github.com/MTUCIBOY/MyProject/VKR/pkg/storage/postgreSQL"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 	"github.com/go-chi/jwtauth/v5"
 )
 
@@ -57,18 +61,26 @@ func initRouter(log *slog.Logger, db *postgresql.Storage, cfg *config.Config) *c
 		middleware.RequestID,
 		middleware.Logger,
 		middleware.Recoverer,
+		httpheaders.SetHeadersMiddleware,
+		httprate.LimitByIP(cfg.LimitByIP, time.Minute),
+		httprate.LimitAll(cfg.LimitAll, time.Minute),
 	)
 
 	router.Group(func(r chi.Router) {
 		r.Use(jwtauth.Verifier(auth.TokenAuth))
 		r.Use(auth.CompareUUIDMiddleware)
 
+		r.Group(func(r chi.Router) {
+			r.Use(sanitizefilename.CheckFilenameMiddleware)
+
+			r.Get("/{userID}/{filename}", sender.New(log, db))
+			r.Delete("/{userID}/{filename}", filedeleter.New(log, db))
+		})
+
 		r.Get("/{userID}", infogeter.New(log, db))
-		r.Get("/{userID}/{filename}", sender.New(log, db))
 
 		r.Post("/{userID}", saver.New(log, db))
 
-		r.Delete("/{userID}/{filename}", filedeleter.New(log, db))
 		r.Delete("/{userID}", userdeleter.New(log, db))
 	})
 

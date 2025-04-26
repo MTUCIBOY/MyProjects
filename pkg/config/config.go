@@ -1,5 +1,3 @@
-// TODO: When project will be done, change MustLoad func
-
 // Пакет config нужен для работы с конфигурацией облачного сервера.
 // Пакет использует конфиги в формате YAML.
 // Зависит от стороннего пакета cleanenv для более удобной работы с тегами структуры и парсинга конфиг-файла.
@@ -26,13 +24,19 @@ type Config struct {
 	StorageDSN string `env-required:"true" yaml:"storage_dsn"`
 
 	// Переменная, задающая время жизни JWT.
-	TokenTTL time.Duration `env-required:"true" yaml:"token_ttl"`
+	TokenTTL time.Duration `env-default:"1h" yaml:"token_ttl"`
 
 	// Переменная пути сертификата.
 	CertPath string `env-required:"true" yaml:"cert_path"`
 
 	// Переменная пути приватного ключа.
 	KeyPath string `env-required:"true" yaml:"key_path"`
+
+	// Предел количества обращений одного пользователя к сервису в минуту.
+	LimitByIP int `env-default:"10" yaml:"limit_by_IP"`
+
+	// Предел количества обращений к сервису в минуту.
+	LimitAll int `env-default:"100" yaml:"limit_all"`
 
 	// Настройки HTTP-сервера.
 	HTTPServer `yaml:"http_server"`
@@ -57,8 +61,7 @@ type HTTPServer struct {
 func MustLoad() *Config {
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
-		// log.Fatal("CONFIG_PATH is not set")
-		configPath = "/home/pain/MyProjects/config/local.yml"
+		log.Fatal("CONFIG_PATH is not set")
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {

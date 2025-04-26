@@ -3,6 +3,7 @@
 package auth
 
 import (
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -18,6 +19,10 @@ var TokenAuth *jwtauth.JWTAuth
 // init создание TokenAuth.
 func init() {
 	secretKey := []byte(os.Getenv("JWT_SECRET"))
+	if len(secretKey) == 0 {
+		log.Fatal("JWT_SECRET is not set")
+	}
+
 	TokenAuth = jwtauth.New("HS256", secretKey, nil)
 }
 
