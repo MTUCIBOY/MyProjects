@@ -4,14 +4,15 @@ package sender
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	filecrypt "github.com/MTUCIBOY/MyProject/VKR/pkg/fileCrypt"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	"github.com/go-chi/chi/v5"
@@ -80,16 +81,31 @@ func New(log *slog.Logger, fileSender fileSender) http.HandlerFunc {
 
 // sendFile функция для отправки файла пользователю.
 func sendFile(log *slog.Logger, filePath string, w http.ResponseWriter) error {
-	file, err := os.Open(filePath)
+	file, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Error("failed to open file", slog.String("err", err.Error()))
 		http.Error(w, "Failed to open file", http.StatusInternalServerError)
 
 		return fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
 
-	_, err = io.Copy(w, file)
+	key, err := base64.StdEncoding.DecodeString(os.Getenv("FILE_ENCRYPTION_KEY"))
+	if err != nil {
+		log.Error("failed to decode string", slog.String("err", err.Error()))
+		http.Error(w, "Failed to decrypt file", http.StatusInternalServerError)
+
+		return fmt.Errorf("failed to decrypt file: %w", err)
+	}
+
+	decryptData, err := filecrypt.DecryptData(file, key)
+	if err != nil {
+		log.Error("failed to decrypt file", slog.String("err", err.Error()))
+		http.Error(w, "Failed to decrypt file", http.StatusInternalServerError)
+
+		return fmt.Errorf("failed to decrypt file: %w", err)
+	}
+
+	_, err = w.Write(decryptData)
 	if err != nil {
 		log.Error("failed to send file", slog.String("err", err.Error()))
 		http.Error(w, "Failed to send file", http.StatusInternalServerError)

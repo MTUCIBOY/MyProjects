@@ -4,6 +4,7 @@ package saver
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 
+	filecrypt "github.com/MTUCIBOY/MyProject/VKR/pkg/fileCrypt"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	"github.com/go-chi/chi/v5"
@@ -64,17 +66,17 @@ func New(log *slog.Logger, fileSaver fileSaver) http.HandlerFunc {
 		}
 		defer file.Close()
 
-		err = fileSaver.NewFile(r.Context(), userID, handler.Filename, handler.Size)
-		if err != nil {
-			checkErrFromDB(err, log, w)
-
-			return
-		}
-
 		err = saveFileToDisk(userID, handler.Filename, file)
 		if err != nil {
 			log.Error("failed to save file on disk", slog.String("err", err.Error()))
 			http.Error(w, "Failed to save file", http.StatusInternalServerError)
+
+			return
+		}
+
+		err = fileSaver.NewFile(r.Context(), userID, handler.Filename, handler.Size)
+		if err != nil {
+			checkErrFromDB(err, log, w)
 
 			return
 		}
@@ -113,7 +115,22 @@ func saveFileToDisk(userID, filename string, file multipart.File) error {
 	}
 	defer dst.Close()
 
-	_, err = io.Copy(dst, file)
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	key, err := base64.StdEncoding.DecodeString(os.Getenv("FILE_ENCRYPTION_KEY"))
+	if err != nil {
+		return fmt.Errorf("failed to decode string: %w", err)
+	}
+
+	encryptedData, err := filecrypt.EncryptData(fileData, key)
+	if err != nil {
+		return fmt.Errorf("failed encrypt file: %w", err)
+	}
+
+	err = os.WriteFile(filePath, encryptedData, fileRights)
 	if err != nil {
 		return fmt.Errorf("failed to save file content: %w", err)
 	}

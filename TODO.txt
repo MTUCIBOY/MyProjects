@@ -2,7 +2,7 @@
 2. Rate Limit - DONE! 
 3. SQL-инъекции - DONE!
 4. File-инъекции (чистить пути filename) - проверить на текстах
-5. HttpHeaders (Дока)
-6. Шифрование файлов
+5. HttpHeaders (сделать дока)
+6. Шифрование файлов - DONE! (https://tutorialedge.net/golang/go-encrypt-decrypt-aes-tutorial/)
 7. JWT_SECRET -> crypto/rand
 8. Тесты

@@ -18,11 +18,7 @@ func CheckFilenameMiddleware(next http.Handler) http.Handler {
 			slog.String("request ID", middleware.GetReqID(r.Context())),
 		)
 
-		log.Info(chi.URLParam(r, "filename"))
-
 		cleanPath := filepath.Clean(chi.URLParam(r, "filename"))
-
-		log.Info(cleanPath)
 
 		if filepath.IsAbs(cleanPath) || strings.HasPrefix(cleanPath, "..") {
 			log.Error("Invalid filename")
