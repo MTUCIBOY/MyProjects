@@ -6,6 +6,6 @@
 6. Шифрование файлов - DONE!
 7. JWT_SECRET -> crypto/rand - DONE!
 8. Тесты
-9. Шифрование файлов (дока) 
-   (https://tutorialedge.net/golang/go-encrypt-decrypt-aes-tutorial/)
-10. Graceful Shutdown
+9. Шифрование файлов (дока) - DONE!
+10. Graceful Shutdown - DONE!
+11. Docker + docker-compose.yml

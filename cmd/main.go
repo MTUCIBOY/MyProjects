@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
@@ -99,10 +101,26 @@ func initServer(log *slog.Logger, router *chi.Mux, cfg *config.Config) {
 		IdleTimeout:  cfg.IdleTimeout,
 	}
 
+	gracefulShutdown(log, srv)
+
 	err := srv.ListenAndServeTLS(os.Getenv("CERT_PATH"), os.Getenv("KEY_PATH"))
 	if err != nil {
-		log.Error("failed to start server", slog.String("err", err.Error()))
+		log.Warn("error from ListenAndServeTSL", slog.String("err", err.Error()))
 	}
 
-	log.Error("server stopped")
+	log.Info("Server stoped")
+}
+
+func gracefulShutdown(log *slog.Logger, server *http.Server) {
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		<-c
+
+		log.Info("Received shutdown signal, gracefully shutting down...")
+
+		if err := server.Shutdown(context.TODO()); err != nil {
+			log.Warn("failed to shutdown server", slog.String("err", err.Error()))
+		}
+	}()
 }

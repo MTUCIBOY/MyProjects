@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 )
 
+// Длина секретного ключа для создания TokenAuth.
 const keyLength = 32
 
 // TokenAuth переменная для создания и проверки JWT.

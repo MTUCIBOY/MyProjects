@@ -70,8 +70,7 @@ func New(log *slog.Logger, fileSender fileSender) http.HandlerFunc {
 
 		filePath := filepath.Join(files.BaseDir, userID, filename)
 
-		err = sendFile(log, filePath, w)
-		if err != nil {
+		if err := sendFile(log, filePath, w); err != nil {
 			return
 		}
 
