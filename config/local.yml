@@ -1,10 +1,8 @@
 env: "local"
-storage_dsn: "postgres://pain@localhost:5432/CloudDB"
 token_ttl: 1h
-cert_path: "./cert/localhost.pem"
-key_path: "./cert/localhost-key.pem"
 limit_by_IP: 10
 limit_all: 100
+
 http_server:
   address: "localhost:8888"
   timeout: 30m

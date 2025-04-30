@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/config"
@@ -32,7 +33,7 @@ func main() {
 
 	log.Info("Start app", slog.Any("config", cfg))
 
-	db := initDB(ctx, log, cfg)
+	db := initDB(ctx, log)
 	defer db.Close(ctx)
 
 	router := initRouter(log, db, cfg)
@@ -40,15 +41,13 @@ func main() {
 	initServer(log, router, cfg)
 }
 
-func initDB(ctx context.Context, log *slog.Logger, cfg *config.Config) *postgresql.Storage {
+func initDB(ctx context.Context, log *slog.Logger) *postgresql.Storage {
 	log.Info("Start DB")
 
-	db, err := postgresql.New(ctx, log, cfg.StorageDSN)
+	db, err := postgresql.New(ctx, log, os.Getenv("STORAGE_DSN"))
 	if err != nil {
 		panic(err)
 	}
-
-	log.Info("Start DB is success")
 
 	return &db
 }
@@ -91,7 +90,7 @@ func initRouter(log *slog.Logger, db *postgresql.Storage, cfg *config.Config) *c
 }
 
 func initServer(log *slog.Logger, router *chi.Mux, cfg *config.Config) {
-	log.Info("Start server", slog.Any("cfg", cfg))
+	log.Info("Start server", slog.Any("cfg", cfg.HTTPServer))
 	srv := &http.Server{
 		Addr:         cfg.Address,
 		Handler:      router,
@@ -100,7 +99,8 @@ func initServer(log *slog.Logger, router *chi.Mux, cfg *config.Config) {
 		IdleTimeout:  cfg.IdleTimeout,
 	}
 
-	if err := srv.ListenAndServeTLS(cfg.CertPath, cfg.KeyPath); err != nil {
+	err := srv.ListenAndServeTLS(os.Getenv("CERT_PATH"), os.Getenv("KEY_PATH"))
+	if err != nil {
 		log.Error("failed to start server", slog.String("err", err.Error()))
 	}
 

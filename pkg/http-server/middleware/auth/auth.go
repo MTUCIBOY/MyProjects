@@ -3,27 +3,32 @@
 package auth
 
 import (
+	"crypto/rand"
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/jwtauth/v5"
 )
 
+const keyLength = 32
+
 // TokenAuth переменная для создания и проверки JWT.
 var TokenAuth *jwtauth.JWTAuth
 
 // init создание TokenAuth.
 func init() {
-	secretKey := []byte(os.Getenv("JWT_SECRET"))
-	if len(secretKey) == 0 {
-		log.Fatal("JWT_SECRET is not set")
+	randomKey := make([]byte, keyLength)
+
+	// rand.Read паникует в случае ошибки.
+	_, err := rand.Read(randomKey)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	TokenAuth = jwtauth.New("HS256", secretKey, nil)
+	TokenAuth = jwtauth.New("HS256", randomKey, nil)
 }
 
 // CompareUUIDMiddleware мидлвейр для проверки UUID из URL и из JWT.

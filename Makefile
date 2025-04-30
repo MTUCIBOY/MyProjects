@@ -1,4 +1,4 @@
-.PHONY: clean_cloudDB
+.PHONY: clean_cloudDB cert_gen
 
 clean_cloudDB:
 	@rm -rf ./CloudBase

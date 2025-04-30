@@ -18,19 +18,8 @@ type Config struct {
 	// Нужна для разного уровня логирования.
 	Env string `env-default:"local" yaml:"env"`
 
-	// Переменная для подключения к базе данных.
-	// Используется в PGX PostgresSQL.
-	// Если строка пустая, но приложение не запустится.
-	StorageDSN string `env-required:"true" yaml:"storage_dsn"`
-
 	// Переменная, задающая время жизни JWT.
 	TokenTTL time.Duration `env-default:"1h" yaml:"token_ttl"`
-
-	// Переменная пути сертификата.
-	CertPath string `env-required:"true" yaml:"cert_path"`
-
-	// Переменная пути приватного ключа.
-	KeyPath string `env-required:"true" yaml:"key_path"`
 
 	// Предел количества обращений одного пользователя к сервису в минуту.
 	LimitByIP int `env-default:"10" yaml:"limit_by_IP"`

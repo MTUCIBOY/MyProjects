@@ -29,14 +29,14 @@ func New(ctx context.Context, log *slog.Logger, storagePath string) (Storage, er
 	const fn = "postgresql.New"
 	l := log.With(slog.String("fn", fn))
 
-	dns, err := pgx.ParseConfig(storagePath)
+	dsn, err := pgx.ParseConfig(storagePath)
 	if err != nil {
 		l.Error("error to parse config", "ParseConfig", err)
 
 		return Storage{}, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	conn, err := pgx.ConnectConfig(ctx, dns)
+	conn, err := pgx.ConnectConfig(ctx, dsn)
 	if err != nil {
 		l.Error("error to connect to DB", "ConnectConfig", err)
 
@@ -48,8 +48,6 @@ func New(ctx context.Context, log *slog.Logger, storagePath string) (Storage, er
 
 		return Storage{}, fmt.Errorf("%s: %w", fn, err)
 	}
-
-	l.Info("New storage was created")
 
 	return Storage{db: conn, log: log}, nil
 }
