@@ -27,7 +27,7 @@ type delUser interface {
 }
 
 // DelRequest структура запроса пользователя. Нужна для парсинга тела запроса.
-type delRequest struct {
+type DelRequest struct {
 	Password string `json:"password"`
 }
 
@@ -48,7 +48,7 @@ func New(log *slog.Logger, delUser delUser) http.HandlerFunc {
 			return
 		}
 
-		var delr delRequest
+		var delr DelRequest
 		if err := json.NewDecoder(r.Body).Decode(&delr); err != nil {
 			log.Error("failed to decode request body", slog.String("err", err.Error()))
 			http.Error(w, "Bad request", http.StatusBadRequest)

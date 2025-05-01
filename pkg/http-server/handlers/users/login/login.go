@@ -20,7 +20,7 @@ type loginUser interface {
 }
 
 // loginRequest структура запроса пользователя. Нужна для парсинга тела запроса.
-type loginRequest struct {
+type UserRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -34,7 +34,7 @@ func New(log *slog.Logger, loginUser loginUser, tokenTTL time.Duration) http.Han
 			slog.String("requestID", middleware.GetReqID(r.Context())),
 		)
 
-		var req loginRequest
+		var req UserRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Error("failed to decode request body", slog.String("err", err.Error()))
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -69,9 +69,14 @@ func New(log *slog.Logger, loginUser loginUser, tokenTTL time.Duration) http.Han
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		w.WriteHeader(http.StatusOK)
+
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"token": tokenString,
 			"uuid":  uuid,
-		})
+		}); err != nil {
+			log.Error("failed to encode JSON", slog.String("err", err.Error()))
+			http.Error(w, "Failed to encode responde", http.StatusInternalServerError)
+		}
 	}
 }

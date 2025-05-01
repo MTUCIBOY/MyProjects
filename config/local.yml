@@ -1,7 +1,7 @@
 env: "local"
 token_ttl: 1h
-limit_by_IP: 10
-limit_all: 100
+limit_by_IP: 100
+limit_all: 1000
 
 http_server:
   address: "localhost:8888"

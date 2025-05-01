@@ -16,6 +16,7 @@ import (
 
 	filecrypt "github.com/MTUCIBOY/MyProject/VKR/pkg/fileCrypt"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/files"
+	sanitizefilename "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/sanitizeFilename"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -66,6 +67,13 @@ func New(log *slog.Logger, fileSaver fileSaver) http.HandlerFunc {
 		}
 		defer file.Close()
 
+		if !sanitizefilename.IsValidFileName(handler.Filename) {
+			log.Error("Invalid filename")
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+
+			return
+		}
+
 		err = saveFileToDisk(userID, handler.Filename, file)
 		if err != nil {
 			log.Error("failed to save file on disk", slog.String("err", err.Error()))
@@ -81,7 +89,11 @@ func New(log *slog.Logger, fileSaver fileSaver) http.HandlerFunc {
 			return
 		}
 
-		log.Info("File is saved")
+		log.Info(
+			"File is saved",
+			slog.String("file name", handler.Filename),
+			slog.Int64("file size", handler.Size),
+		)
 
 		w.WriteHeader(http.StatusCreated)
 	}
@@ -154,21 +166,21 @@ func removeMultipartFiles(log *slog.Logger, r *http.Request) {
 func checkErrFromDB(err error, log *slog.Logger, w http.ResponseWriter) {
 	if errors.Is(err, storage.ErrFileExists) {
 		log.Error(err.Error())
-		http.Error(w, "Failed to save file, file exists", http.StatusBadRequest)
+		http.Error(w, "Failed to save file, file exists", http.StatusConflict)
 
 		return
 	}
 
 	if errors.Is(err, storage.ErrNotEnoughSpace) {
 		log.Error(err.Error())
-		http.Error(w, "Failed to save file, not enough space", http.StatusBadRequest)
+		http.Error(w, "Failed to save file, not enough space", http.StatusConflict)
 
 		return
 	}
 
 	if errors.Is(err, storage.ErrUserNotFound) {
 		log.Error(err.Error())
-		http.Error(w, "Failed to save file, user not found", http.StatusBadRequest)
+		http.Error(w, "Failed to save file, user not found", http.StatusNotFound)
 
 		return
 	}

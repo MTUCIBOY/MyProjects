@@ -19,7 +19,7 @@ type regUser interface {
 }
 
 // RegRequest структура запроса пользователя. Нужна для парсинга тела запроса.
-type regRequest struct {
+type UserRequest struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
 	SpaceAvailable int64  `json:"space_available"`
@@ -34,7 +34,7 @@ func New(log *slog.Logger, regUser regUser) http.HandlerFunc {
 			slog.String("requestID", middleware.GetReqID(r.Context())),
 		)
 
-		var req regRequest
+		var req UserRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Error("failed to parse request body", slog.String("err", err.Error()))
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -46,7 +46,7 @@ func New(log *slog.Logger, regUser regUser) http.HandlerFunc {
 		if err != nil {
 			if errors.Is(err, storage.ErrUserAlreadyExists) {
 				log.Error(storage.ErrUserAlreadyExists.Error())
-				http.Error(w, "User already exists", http.StatusBadRequest)
+				http.Error(w, "User already exists", http.StatusConflict)
 
 				return
 			}
