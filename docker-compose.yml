@@ -1,0 +1,21 @@
+services:
+  cloud-server:
+    image: my-cloud-server
+    container_name: cloud-server
+    env_file:
+      - .env
+    ports:
+      - "8888:443"
+    depends_on:
+      - postgres-server
+
+
+  postgres-server:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgresql
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    restart: always
