@@ -2,3 +2,4 @@
 cert/
 CloudBase/
 .env
+build/
