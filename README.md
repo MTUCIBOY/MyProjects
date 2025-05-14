@@ -55,12 +55,14 @@
 	 - STORAGE_DSN= *ссылка на подключение к БД*
 	 - FILE_ENCRYPTION_KEY= *секретный ключ для шифрования данных*
 Пример такоего файла:
-``BASE_PATH=./CloudBase``
-``CONFIG_PATH=./config/local.yml``
-``CERT_PATH=./cert/localhost.pem``
-``KEY_PATH=./cert/localhost-key.pem``
-``STORAGE_DSN=postgresql://postgres:postgresql@postgres-server:5432/postgres``
-``FILE_ENCRYPTION_KEY="V74SfeZmO/8fcW1zWCfRD8OcUqA9Whm8oJIoJlSHohk="``
+```
+BASE_PATH=./CloudBase
+CONFIG_PATH=./config/local.yml
+CERT_PATH=./cert/localhost.pem
+KEY_PATH=./cert/localhost-key.pem
+STORAGE_DSN=postgresql://postgres:postgresql@postgres-server:5432/postgres
+FILE_ENCRYPTION_KEY="V74SfeZmO/8fcW1zWCfRD8OcUqA9Whm8oJIoJlSHohk="
+```
 Для генерации FILE_ENCRYPTION_KEY выполните команду: ``$ openssl rand -base64 32``. Ключ должен быть строго 32 байта!
 3. Выполните команду: ``$ export $(cat .env | xargs)`` для того, чтобы загрузить все переменные в терминал
 
