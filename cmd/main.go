@@ -21,6 +21,7 @@ import (
 	httpheaders "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/http-headers"
 	sanitizefilename "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/sanitizeFilename"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
+	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	postgresql "github.com/MTUCIBOY/MyProject/VKR/pkg/storage/postgreSQL"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -54,7 +55,7 @@ func initDB(ctx context.Context, log *slog.Logger) *postgresql.Storage {
 	return &db
 }
 
-func initRouter(log *slog.Logger, db *postgresql.Storage, cfg *config.Config) *chi.Mux {
+func initRouter(log *slog.Logger, db storage.DataBase, cfg *config.Config) *chi.Mux {
 	log.Info("Start router")
 
 	router := chi.NewRouter()

@@ -3,6 +3,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"regexp"
 )
@@ -15,6 +16,18 @@ var (
 	ErrFileExists        = errors.New("file exists")
 	ErrUserAlreadyExists = errors.New("user already exists")
 )
+
+type DataBase interface {
+	Close(ctx context.Context)
+	NewUser(ctx context.Context, email, password string, spaceAvailable int64) error
+	NewFile(ctx context.Context, userID, filename string, fileSize int64) error
+	DeleteFile(ctx context.Context, userID, filename string) error
+	DeleteUser(ctx context.Context, userID string) error
+	UserID(ctx context.Context, email string) (string, error)
+	IsFileExist(ctx context.Context, userID, filename string) (bool, error)
+	AllFiles(ctx context.Context, userID string) ([]string, error)
+	ComparePassword(ctx context.Context, userID, password string) error
+}
 
 // Скрипты для работы с таблицами.
 const (
