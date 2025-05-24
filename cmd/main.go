@@ -76,12 +76,11 @@ func initRouter(log *slog.Logger, db storage.DataBase, cfg *config.Config) *chi.
 			r.Use(sanitizefilename.CheckFilenameMiddleware)
 
 			r.Get("/{userID}/{filename}", sender.New(log, db))
+			r.Post("/{userID}", saver.New(log, db))
 			r.Delete("/{userID}/{filename}", filedeleter.New(log, db))
 		})
 
 		r.Get("/{userID}", infogeter.New(log, db))
-
-		r.Post("/{userID}", saver.New(log, db))
 
 		r.Delete("/{userID}", userdeleter.New(log, db))
 	})
