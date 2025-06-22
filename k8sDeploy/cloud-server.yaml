@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloud-server
+  template:
+    metadata:
+      labels:
+        app: cloud-server
+    spec:
+      containers:
+      - name: cloud-server
+        image: my-cloud-server
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 443
+        env:
+        - name: BASE_PATH
+          value: ./CloudBase # Путь внутри контейнера
+        - name: CONFIG_PATH
+          value: ./config/local.yml # Путь внутри контейнера
+        - name: CERT_PATH
+          value: ./cert/localhost.pem # Путь внутри контейнера
+        - name: KEY_PATH
+          value: ./cert/localhost-key.pem # Путь внутри контейнера
+        - name: STORAGE_DSN
+          value: "postgresql://postgres:postgresql@postgres-server:5432/postgres"
+        - name: FILE_ENCRYPTION_KEY
+          value: "V74SfeZmO/8fcW1zWCfRD8OcUqA9Whm8oJIoJlSHohk="
+        volumeMounts:
+        - name: base-path
+          mountPath: /CloudBase # Соответствует BASE_PATH
+        - name: config
+          mountPath: /config/local.yml
+          subPath: local.yml # Соответствует CONFIG_PATH
+        - name: certs
+          mountPath: /cert # Соответствует CERT_PATH и KEY_PATH
+      volumes:
+      - name: base-path
+        hostPath:
+          path: /home/pain/CloudBase # Реальный путь на вашей машине
+      - name: config
+        configMap:
+          name: cloud-config
+      - name: certs
+        hostPath:
+          path: /home/pain/MyProjects/cert # Реальный путь к директории с сертификатами
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-server
+spec:
+  type: NodePort
+  selector:
+    app: cloud-server
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 443
+      nodePort: 30443 # Доступ через https://<minikube-ip>:30443 

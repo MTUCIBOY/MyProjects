@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-config
+data:
+  local.yml: |
+    env: "local"
+    token_ttl: 1h
+    limit_by_IP: 100
+    limit_all: 1000
+
+    http_server:
+      address: "0.0.0.0:443"
+      timeout: 30m
+      idle_timeout: 5m

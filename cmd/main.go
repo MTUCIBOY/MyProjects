@@ -19,7 +19,6 @@ import (
 	userdeleter "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/handlers/users/userDeleter"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/auth"
 	httpheaders "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/http-headers"
-	sanitizefilename "github.com/MTUCIBOY/MyProject/VKR/pkg/http-server/middleware/sanitizeFilename"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/logger"
 	"github.com/MTUCIBOY/MyProject/VKR/pkg/storage"
 	postgresql "github.com/MTUCIBOY/MyProject/VKR/pkg/storage/postgreSQL"
@@ -73,7 +72,7 @@ func initRouter(log *slog.Logger, db storage.DataBase, cfg *config.Config) *chi.
 		r.Use(auth.CompareUUIDMiddleware)
 
 		r.Group(func(r chi.Router) {
-			r.Use(sanitizefilename.CheckFilenameMiddleware)
+			// r.Use(sanitizefilename.CheckFilenameMiddleware)
 
 			r.Get("/{userID}/{filename}", sender.New(log, db))
 			r.Post("/{userID}", saver.New(log, db))

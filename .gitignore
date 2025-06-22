@@ -3,3 +3,4 @@ cert/
 CloudBase/
 .env
 build/
+.vscode

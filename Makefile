@@ -24,3 +24,6 @@ upServer: buildServer
 buildServer:
 	mkdir -p build
 	go build -o ./build/ -v cmd/*.go
+
+ApacheBanch:
+	ab -n 2000 -c 200 https://localhost:8888/
